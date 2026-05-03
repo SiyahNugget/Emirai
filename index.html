@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>EmirAI 1.0</title>
+    <style>
+        :root {
+            --accent: #00d2ff;
+            --bg-grad: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            --glass: rgba(255, 255, 255, 0.05);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --text: #f8fafc;
+        }
+
+        /* TEMA MODLARI */
+        body.purple {
+            --accent: #bc13fe;
+            --bg-grad: linear-gradient(135deg, #1a0b2e 0%, #09090b 100%);
+            --glass: rgba(188, 19, 254, 0.05);
+        }
+
+        body.academic {
+            --accent: #2563eb;
+            --bg-grad: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            --glass: rgba(255, 255, 255, 0.8);
+            --glass-border: #cbd5e1;
+            --text: #1e293b;
+        }
+
+        body { background: var(--bg-grad); color: var(--text); font-family: 'Inter', sans-serif; margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; transition: 0.5s; }
+        
+        #ai-container { width: 90%; max-width: 850px; height: 88vh; background: var(--glass); backdrop-filter: blur(20px); border: 1px solid var(--glass-border); border-radius: 30px; display: flex; flex-direction: column; box-shadow: 0 20px 40px rgba(0,0,0,0.4); }
+        
+        .header { padding: 15px 25px; border-bottom: 1px solid var(--glass-border); display: flex; justify-content: space-between; align-items: center; }
+        .header h1 { font-size: 1.2rem; margin: 0; color: var(--accent); }
+
+        .theme-btn {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: bold;
+            opacity: 0.8;
+            transition: 0.3s;
+        }
+        .theme-btn:hover { opacity: 1; transform: scale(1.05); }
+
+        #chat-window { flex: 1; overflow-y: auto; padding: 25px; display: flex; flex-direction: column; gap: 15px; }
+        .msg { max-width: 80%; padding: 12px 18px; border-radius: 20px; font-size: 15px; line-height: 1.5; animation: pop 0.3s ease; }
+        .bot { align-self: flex-start; background: rgba(255, 255, 255, 0.05); border: 1px solid var(--glass-border); }
+        body.academic .bot { background: #fff; border-color: #cbd5e1; }
+        
+        .user { align-self: flex-end; background: var(--accent); color: white; font-weight: 600; }
+        body.academic .user { color: #fff; }
+
+        #input-area { padding: 20px; background: rgba(0,0,0,0.1); display: flex; gap: 12px; border-bottom-left-radius: 30px; border-bottom-right-radius: 30px; }
+        input { flex: 1; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); padding: 14px; border-radius: 15px; color: inherit; outline: none; }
+        button#send-btn { background: var(--accent); color: white; border: none; padding: 0 25px; border-radius: 15px; cursor: pointer; font-weight: bold; }
+        
+        @keyframes pop { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body id="mainBody">
+
+<div id="ai-container">
+    <div class="header">
+        <h1>EMIRAI 1.0</h1>
+        <button class="theme-btn" onclick="toggleTheme()">TEMA DEĞİŞTİR</button>
+    </div>
+    <div id="chat-window"></div>
+    <div id="input-area">
+        <input type="text" id="userInput" placeholder="Mesajını buraya bırak kanka..." autocomplete="off">
+        <button id="send-btn" onclick="askAI()">SORGULA</button>
+    </div>
+</div>
+
+<script>
+    const chatWindow = document.getElementById('chat-window');
+    const body = document.getElementById('mainBody');
+    const forbidden = ["p*rno", "s*ks", "adult", "cinsel", "+18"];
+    let currentTheme = 0; // 0: Blue, 1: Purple, 2: Academic
+
+    function toggleTheme() {
+        currentTheme = (currentTheme + 1) % 3;
+        body.className = "";
+        if (currentTheme === 1) body.classList.add('purple');
+        if (currentTheme === 2) body.classList.add('academic');
+    }
+
+    function isClean(text) {
+        const low = text.toLowerCase();
+        return !forbidden.some(word => low.includes(word.replace('*','')));
+    }
+
+    async function setRandomGreeting() {
+        try {
+            const res = await fetch(`https://tr.wikipedia.org/w/api.php?action=query&list=random&rnnamespace=0&rnlimit=1&format=json&origin=*`);
+            const data = await res.json();
+            const randomTitle = data.query.random[0].title;
+            if (isClean(randomTitle)) {
+                addMessage(`Selam kanka! EmirAI 1.0 hazır. Bugün "${randomTitle}" hakkında konuşalım mı? 🍯`, 'bot');
+            } else { setRandomGreeting(); }
+        } catch (e) { addMessage("Selam kanka! EmirAI 1.0 hizmetinde. Ne araştıralım?", 'bot'); }
+    }
+
+    async function askAI() {
+        const input = document.getElementById('userInput').value.trim();
+        if (!input) return;
+
+        addMessage(input, 'user');
+        document.getElementById('userInput').value = '';
+        const lowInput = input.toLowerCase();
+
+        // ÖZEL İSİMLER (Zeynep Naz & İpek)
+        if ((lowInput.includes("zeynep naz") || lowInput.includes("ipek")) && lowInput.includes("kimdir")) {
+            setTimeout(() => addMessage("Kurucunun en sevdiği arkadaşı :)", 'bot'), 600);
+            return;
+        }
+
+        if (!isClean(input)) {
+            setTimeout(() => addMessage("Kanka bu konu pek uygun değil, başka bir şey soralım! 👋", 'bot'), 500);
+            return;
+        }
+
+        let query = lowInput.replace("nedir", "").replace("kimdir", "").trim();
+        if (query.length < 3) return;
+
+        try {
+            const sUrl = `https://tr.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&format=json&origin=*`;
+            const sRes = await fetch(sUrl);
+            const sData = await sRes.json();
+            
+            if (sData.query.search.length > 0) {
+                const title = sData.query.search[0].title;
+                const dUrl = `https://tr.wikipedia.org/w/api.php?action=query&prop=extracts&exintro&explaintext&titles=${encodeURIComponent(title)}&format=json&origin=*`;
+                const dRes = await fetch(dUrl);
+                const dData = await dRes.json();
+                const extract = dData.query.pages[Object.keys(dData.query.pages)[0]].extract;
+                
+                if (extract && isClean(extract)) {
+                    addMessage(`${title} hakkında bildiklerim şunlar kanka: \n\n${extract.substring(0, 450)}...`, 'bot');
+                } else { addMessage("İçerik filtreye takıldı kanka.", 'bot'); }
+            } else { addMessage("Aradığın şeyi bulamadım kanka.", 'bot'); }
+        } catch (e) { addMessage("Bağlantı hatası kanka.", 'bot'); }
+    }
+
+    function addMessage(text, type) {
+        const div = document.createElement('div');
+        div.className = `msg ${type}`;
+        div.innerText = text;
+        chatWindow.appendChild(div);
+        chatWindow.scrollTop = chatWindow.scrollHeight;
+    }
+
+    window.onload = setRandomGreeting;
+    document.getElementById('userInput').addEventListener("keypress", (e) => { if(e.key === "Enter") askAI(); });
+</script>
+</body>
+</html>
